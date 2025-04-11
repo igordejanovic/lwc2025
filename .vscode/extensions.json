@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "textx.textx",
+    "ms-python.python",
+    "ms-python.debugpy",
+    "connor4312.esbuild-problem-matchers"
+  ]
+}

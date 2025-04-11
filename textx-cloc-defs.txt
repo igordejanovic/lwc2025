@@ -1,0 +1,4 @@
+textX grammar
+    filter call_regexp_common C++
+    extension tx
+    3rd_gen_scale 1.36

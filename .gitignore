@@ -1,0 +1,6 @@
+/.venv/
+/.tool-versions
+__pycache__
+*.egg-info
+/.env
+/.direnv/

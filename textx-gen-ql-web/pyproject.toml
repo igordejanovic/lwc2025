@@ -1,0 +1,70 @@
+[project]
+name = "textx-gen-ql-web"
+version = "0.1.0"
+description = "Generator for Web forms from Questionnaire Language - LWC 2025"
+authors = [
+    {name = "Igor R. Dejanović", email = "igor.dejanovic@gmail.com"},
+]
+maintainers = [
+    {name = "Igor R. Dejanović", email = "igor.dejanovic@gmail.com"},
+]
+readme = "README.md"
+license = {text = "MIT"}
+keywords = ["textX", "DSL", "questionnaire", "web", "generator"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+requires-python = ">=3.10"
+dependencies = [
+    "textx-lang-ql>=0.1.0",
+    "textx-jinja"
+]
+
+[project.urls]
+Homepage = "https://github.com/igordejanovic/lwc2025"
+Repository = "https://github.com/igordejanovic/lwc2025"
+
+[build-system]
+build-backend = "flit_core.buildapi"
+requires = ["flit_core >=3.8.0,<4"]
+
+[tool.flit.module]
+name = "qlweb"
+
+[tool.flit.sdist]
+exclude = ["**/.*"]
+
+[project.entry-points.textx_generators]
+qlweb = "qlweb:questlang_generate_web"
+
+[tool.ruff]
+line-length = 90
+indent-width = 4
+
+[tool.ruff.lint]
+# https://docs.astral.sh/ruff/linter/#rule-selection
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]

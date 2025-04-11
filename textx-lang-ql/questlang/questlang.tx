@@ -1,0 +1,106 @@
+/*
+    Questionnaire language for LWC 2025
+*/
+
+Model:
+    forms+=Form
+;
+
+Form:
+    'form' name=ID description=STRING '{'
+        questions+=Question
+    '}'
+;
+
+Question:
+    FieldQuestion | IfConditionalBlock
+;
+
+FieldQuestion:
+    field=FieldDecl
+;
+
+FieldDecl:
+    description=STRING
+    (name=ID ':' grammar_type=FieldType
+    (('default' default_value=Literal)?
+     ('range' range_from=RangeLiteral '..' range_to=RangeLiteral)?)#
+     | name=ID '=' expression=Expression)
+;
+
+FieldType:
+    'boolean' | 'integer' | 'money' | 'string' | 'date'
+;
+
+RangeLiteral: MONEY | INT;
+
+IfConditionalBlock:
+    'if' '(' condition=Expression ')' '{'
+        questions+=Question
+    '}'
+;
+
+Expression:
+    LogicalOrExpression
+;
+
+LogicalOrExpression:
+    operands=LogicalAndExpression ('||' operands=LogicalAndExpression)*
+;
+
+LogicalAndExpression:
+    operands=ComparisonExpression ('&&' operands=ComparisonExpression)*
+;
+
+ComparisonExpression:
+    operands=AddExpression (operations=ComparisonOperation operands=AddExpression)*
+;
+ComparisonOperation: '==' | '!=' | '<' | '>' | '<=' | '>=';
+
+AddExpression:
+    operands=MultExpression (operations=AdditiveOperation operands=MultExpression)*
+;
+AdditiveOperation: '+' | '-';
+
+MultExpression:
+    operands=UnaryExpression (operations=MultiplicativeOperation operands=UnaryExpression)*
+;
+MultiplicativeOperation: '*' | '/' ;
+
+UnaryExpression:
+    (operation=UnaryOperation)? operand=PrimaryExpression
+;
+UnaryOperation: '!' | '-';
+
+PrimaryExpression:
+    Literal | ParenthesedExpression | IfExpression | Reference
+;
+
+ParenthesedExpression:
+    '(' expression=Expression ')'
+;
+
+IfExpression: 'if' condition=Expression
+              'then' then_expression=Expression
+              'else' else_expression=Expression
+;
+
+Literal:
+    Date | Money | Integer | String | Boolean
+;
+
+Integer: value=INT;
+String: value=STRING;
+Boolean: value=BOOL;
+Money: value=MONEY;
+Date: value=DATE;
+
+Reference:
+    ref=[FieldDecl:ID|^~questions*.field]
+;
+
+// Terminal tokens
+MONEY: /-?\d+\.\d+/;
+DATE: /\d{4}-\d{2}-\d{2}/;
+
+Comment: /\/\/.*/;

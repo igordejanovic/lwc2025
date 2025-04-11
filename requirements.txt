@@ -1,0 +1,3 @@
+-e textx-lang-ql
+-e textx-gen-ql-web
+textX[cli]

@@ -1,0 +1,207 @@
+import Stack from '@mui/material/Stack';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
+import Decimal from 'decimal.js';
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import DownloadIcon from '@mui/icons-material/Download';
+import React, { useState } from 'react';
+import YesNoField from '../components/yesno';
+import MoneyField from '../components/money';
+import { PickerValue } from '@mui/x-date-pickers/internals';
+import { conv_integer, conv_bool, conv_money, conv_nan,
+         str_number, str_bool, str_date, str_money } from '../utils/convert'
+
+type FormData = {
+{% for field in form.fields.values() %}
+    {{field.name}}?: string;
+{% endfor %}
+};
+
+type FormDataTyped = {
+{% for field in form.fields.values() %}
+    {{field.name}}{% if not field|numeric %}?{% endif %}: {{field.type|type_conversion}};
+{% endfor %}
+};
+
+type FormFieldsVisible = {
+{% for field in form.fields.values() %}
+{% if field.emit_vis %}
+    {{field.name}}: boolean;
+{% endif %}
+{% endfor %}
+};
+
+const v = (x: any) => x !== null && x !== undefined && !Number.isNaN(x) && (x.isNaN ? !x.isNaN() : true);
+const not = (x: any) => x === undefined ? undefined : !x;
+
+const convert = (fd: FormData): FormDataTyped => {
+    return {
+    {% for field in form.fields.values() %}
+        {{field.name}}: {{field | fd_typed}},
+    {% endfor %}
+    }
+}
+
+function recalculate(formData: FormData): FormData {
+    // Order of evaluation is dictated by dependency graph
+    // Topological sorting is used to determine the order
+    const fdt = convert(formData);
+{% for field_name in form.field_order %}
+    {% if form.fields[field_name].expression %}
+    const {{field_name}} = {{form.fields[field_name].emit}};
+    {% endif %}
+{% endfor %}
+    return {
+        ...formData,
+{% for field_name in form.field_order %}
+    {% if form.fields[field_name].expression %}
+        {{field_name}}: {{form.fields[field_name]|tostr}},
+    {% endif %}
+{% endfor %}
+    };
+}
+
+export default function Questionnaire() {
+    const [formData, setFormData] = useState<FormData>({
+    {% for field in form.fields.values() %}
+        {{field.name}}: undefined,
+    {% endfor %}
+    });
+
+    const fdt = convert(formData);
+
+    const formFieldsVisible: FormFieldsVisible = {
+    {% for field in form.fields.values() %}
+    {% if field.emit_vis %}
+        {{field.name}}: !!({{field.emit_vis}}),
+    {% endif %}
+    {% endfor %}
+    };
+
+    const handleChange = (name: string, value: any) => {
+        setFormData(prevState => {
+            const newState = {
+                ...prevState,
+                [name]: value
+            };
+            return recalculate(newState);
+        });
+    };
+
+    const handleDateChange = (fieldName: keyof FormData) =>
+    (newValue: PickerValue) => {
+        setFormData(prev => ({
+        ...prev,
+            [fieldName]: newValue?.format('YYYY-MM-DD')
+        }));
+    };
+
+    const handleDownload = () => {
+        const fdt = convert(formData);
+        console.log(fdt);
+
+        const dataToExport = {
+            ...fdt,
+        {% for field in form.fields.values() %}
+        {% if field.emit_vis %}
+            {{field.name}}: formFieldsVisible.{{field.name}} ? {{field|export}}: undefined,
+        {% elif field.type == 'string' %}
+            {{field.name}}: {{field|export}} === undefined || {{field|export}} == '' ? undefined : {{field|export}},
+        {% else %}
+            {{field.name}}: {{field|export}} === undefined ? undefined : {{field|export}},
+        {% endif %}
+        {% endfor %}
+        }
+
+        const jsonString = JSON.stringify(dataToExport, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'questionnaire-data-{{form.name|lower}}.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    return (
+        <Stack spacing={2}>
+            <h1 className="text-3xl">{{form.description}}</h1>
+
+        {% for field in form.fields.values() %}
+            {% if field.emit_vis %}
+            {{'{'}}formFieldsVisible.{{field.name}} && ({% endif %}
+
+            {% if field.type == 'boolean' %}
+            <YesNoField name="{{field.name}}"
+                        value={formData.{{field.name}}}
+                        onChange={handleChange}
+                        label="{{field.description}}"
+            />
+
+            {% elif field.type == 'date' %}
+            <DatePicker
+                name="{{field.name}}"
+                label="{{field.description}}"
+                format="YYYY-MM-DD"
+                value={dayjs(formData.{{field.name}})}
+                onChange={handleDateChange('{{field.name}}')}
+            />
+
+            {% elif field.type == 'money' %}
+            <MoneyField
+                name="{{field.name}}"
+                label="{{field.description}}"
+                value={formData.{{field.name}}}
+                onChange={handleChange}
+                {% if field.expression %}
+                disabled
+                {% endif %}
+            />
+
+            {% elif field.type == 'string' %}
+            <TextField
+                name="{{field.name}}"
+                label="{{field.description}}"
+                variant="filled"
+                value={formData.{{field.name}} ?? ''}
+                onChange={(e) => {
+                      handleChange('{{field.name}}', e.target.value);
+                }}
+                slotProps={{'{{'}}
+                    inputLabel: { shrink: true }
+                {{'}}'}}
+            />
+
+            {% elif field|numeric %}
+            <MoneyField
+                name="{{field.name}}"
+                label="{{field.description}}"
+                value={formData.{{field.name}}}
+                onChange={handleChange}
+                decimalPlaces={0}
+                prefix=""
+                {% if field.expression %}
+                disabled
+                {% endif %}
+            />
+
+            {% endif %}
+            {% if field.emit_vis %}
+            )}
+            {% endif %}
+        {% endfor %}
+
+
+            <Button
+                variant="contained"
+                color="primary"
+                startIcon={<DownloadIcon />}
+                onClick={handleDownload}
+                sx={{'{{'}} mt: 2, alignSelf: 'flex-start' {{'}}'}}
+            >
+                Export as JSON
+            </Button>
+        </Stack>
+    );
+}
